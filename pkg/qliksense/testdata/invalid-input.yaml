@@ -1,0 +1,5 @@
+install:
+  - qliksense:
+      description: "Invalid Input Test Case"
+      args:
+      - yarrrr
