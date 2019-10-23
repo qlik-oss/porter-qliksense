@@ -1,9 +1,9 @@
 package qliksense
 
 import (
-	"github.com/qlik-oss/porter-qliksense/pkg"
 	"github.com/deislabs/porter/pkg/mixin"
 	"github.com/deislabs/porter/pkg/porter/version"
+	"github.com/qlik-oss/porter-qliksense/pkg"
 )
 
 func (m *Mixin) PrintVersion(opts version.Options) error {
@@ -12,7 +12,7 @@ func (m *Mixin) PrintVersion(opts version.Options) error {
 		VersionInfo: mixin.VersionInfo{
 			Version: pkg.Version,
 			Commit:  pkg.Commit,
-			Author:  "Boris Kuschel",
+			Author:  "qlik.com",
 		},
 	}
 	return version.PrintVersion(m.Context, opts, metadata)
