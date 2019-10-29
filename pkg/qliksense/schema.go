@@ -2,8 +2,6 @@ package qliksense
 
 import (
 	"fmt"
-
-	packr "github.com/gobuffalo/packr/v2"
 )
 
 func (m *Mixin) PrintSchema() error {
@@ -18,9 +16,7 @@ func (m *Mixin) PrintSchema() error {
 }
 
 func (m *Mixin) GetSchema() (string, error) {
-	t := packr.New("schema", "./schema")
-
-	b, err := t.Find("qliksense.json")
+	b, err := m.schema.Find("qliksense.json")
 	if err != nil {
 		return "", err
 	}

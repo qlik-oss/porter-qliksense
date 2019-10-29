@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"github.com/deislabs/porter/pkg/context"
 	"github.com/ghodss/yaml" // We are not using go-yaml because of serialization problems with jsonschema, don't use this library elsewhere
+	"github.com/gobuffalo/packr/v2"
 	"github.com/pkg/errors"
 	"github.com/xeipuuv/gojsonschema"
 	"io/ioutil"
@@ -14,11 +15,13 @@ import (
 type Mixin struct {
 	*context.Context
 	//add whatever other context/state is needed here
+	schema *packr.Box
 }
 
 // New azure mixin client, initialized with useful defaults.
 func New() (*Mixin, error) {
 	return &Mixin{
+		schema:  packr.New("schema", "./schema"),
 		Context: context.New(),
 	}, nil
 
