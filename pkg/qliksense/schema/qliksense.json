@@ -89,6 +89,14 @@
             "type": "string"
           }
         },
+        "cr": {
+          "type": "object",
+          "properties": {
+            "acceptEULA": {
+              "type": "string"
+            }
+          }
+        },
         "flags": {
           "type": "object",
           "additionalProperties": {
