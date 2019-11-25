@@ -6,9 +6,9 @@ import "fmt"
 // install required components into
 
 const dockerfileLines = `
-COPY --from=qlik/cnab-qliksense-base:latest /usr/local/bin /usr/local/bin
-COPY --from=qlik/cnab-qliksense-base:latest /root/.config/kustomize /root/.config/kustomize
-COPY --from=ffoysal/qseok-executor:latest /app/qliksense-operator /usr/local/bin
+COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
+COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
+COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /usr/local/bin
 `
 
 // Build will generate the necessary Dockerfile lines
