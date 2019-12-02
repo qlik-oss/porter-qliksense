@@ -3,6 +3,7 @@ package qliksense
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/qlik-oss/qliksense-operator/pkg/config"
 	"gopkg.in/yaml.v2"
 	"os"
 	_ "os/exec"
@@ -21,10 +22,7 @@ type InstallStep struct {
 
 type InstallArguments struct {
 	Step `yaml:",inline"`
-	Cr   CR `yaml:"cr"`
-}
-type CR struct {
-	AcceptEULA string `yaml:"acceptEULA"`
+	Cr   config.CRConfig `yaml:"cr" json:"cr"`
 }
 
 // The public method invoked by `porter` when performing an `Install` step that has a `qliksense` mixin step
@@ -55,17 +53,15 @@ func (m *Mixin) Install() error {
 	return nil
 }
 
-func (m *Mixin) executeQliksense(cr *CR) error {
+func (m *Mixin) executeQliksense(cr *config.CRConfig) error {
 	fmt.Println("applying patch ...")
-	tmpl := `
-manifestsRoot: "/cnab/app"
-configs:
-- dataKey: acceptEULA
-  value:
-    qliksense: ` + cr.AcceptEULA
+	crContents, err := yaml.Marshal(cr)
+	if err != nil {
+		fmt.Println("Error while converting qliksense input to cr", err)
+	}
 	cmd := m.NewCommand("qliksense-operator")
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "YAML_CONF="+tmpl)
+	cmd.Env = append(cmd.Env, "YAML_CONF="+string(crContents))
 
 	cmd.Stdout = m.Out
 	cmd.Stderr = m.Err
@@ -73,7 +69,7 @@ configs:
 	if m.Debug {
 		fmt.Println("DEBUG: " + prettyCmd)
 	}
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		fmt.Println(err)
 		return errors.Wrap(err, fmt.Sprintf("couldn't run command %s", prettyCmd))
