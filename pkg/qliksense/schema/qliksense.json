@@ -90,12 +90,7 @@
           }
         },
         "cr": {
-          "type": "object",
-          "properties": {
-            "acceptEULA": {
-              "type": "string"
-            }
-          }
+          "type": "object"
         },
         "flags": {
           "type": "object",
