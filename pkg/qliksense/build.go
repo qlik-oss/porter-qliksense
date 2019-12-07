@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -55,13 +55,14 @@ COPY --from=qlik/qliksense-operator:latest /usr/local/bin/skopeo /usr/local/bin
 	helmHomePrefix = "helmHome"
 	chartCache     = ".chartcache"
 	qlikRegsitry   = "QLIK_REGISTRY"
+	qseokVersion   = "QSEOK_VERSION"
 )
 
 var (
-	settings    *cli.EnvSettings
+	settings       *cli.EnvSettings
 	publicRegistry = "qlik-docker-qsefe.bintray.io"
-	helmDir     = filepath.Join("helm", "repository")
-	versionFile = filepath.Join("transformers", "qseokversion.yaml")
+	helmDir        = filepath.Join("helm", "repository")
+	versionFile    = filepath.Join("transformers", "qseokversion.yaml")
 )
 
 type porterYaml struct {
@@ -102,15 +103,15 @@ type helmChart struct {
 func (m *Mixin) Build() error {
 	var (
 		version, imagesFile, chartFile, image string
-		 err error
-		 createFile = false
-		 file, porterFile *os.File
-		 scanner *bufio.Scanner
-		 parts []string
-		 porterBytes []byte
-		 porterFileYaml porterYaml
+		err                                   error
+		createFile                            = false
+		file, porterFile                      *os.File
+		scanner                               *bufio.Scanner
+		parts                                 []string
+		porterBytes                           []byte
+		porterFileYaml                        porterYaml
 	)
-	if porterBytes,err = ioutil.ReadAll(m.In); err != nil {
+	if porterBytes, err = ioutil.ReadAll(m.In); err != nil {
 		return err
 	}
 
@@ -123,9 +124,9 @@ func (m *Mixin) Build() error {
 			return err
 		}
 		defer porterFile.Close()
-	
+
 		scanner = bufio.NewScanner(porterFile)
-	
+
 		for scanner.Scan() {
 			if strings.Contains(scanner.Text(), qlikRegsitry) {
 				parts = strings.Split(scanner.Text(), "=")
@@ -133,14 +134,22 @@ func (m *Mixin) Build() error {
 					publicRegistry = parts[len(parts)-1]
 				}
 			}
+			if strings.Contains(scanner.Text(), qseokVersion) {
+				parts = strings.Split(scanner.Text(), "=")
+				if len(parts) > 1 {
+					version = parts[len(parts)-1]
+				}
+			}
 		}
 		if err = scanner.Err(); err != nil {
 			return err
-		}	
+		}
 	}
 
 	fmt.Fprintf(m.Out, dockerfileLines)
-	version, _ = getTransformerVersion()
+	if len(version) == 0 {
+		version, _ = getTransformerVersion()
+	}
 	if len(version) > 0 {
 		imagesFile = filepath.Join(chartCache, "images-"+version+".txt")
 	} else {
@@ -150,7 +159,7 @@ func (m *Mixin) Build() error {
 		if os.IsNotExist(err) {
 			createFile = true
 		} else {
-			return errors.Errorf("Unable to determine version file %v exists", versionFile)
+			return errors.Errorf("Unable to determine version file %v exists", imagesFile)
 		}
 	}
 	if _, err = os.Stat(chartFile); err != nil {
