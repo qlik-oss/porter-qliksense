@@ -38,7 +38,7 @@ const (
 	dockerfileLines = `
 RUN echo "deb http://deb.debian.org/debian stretch-backports main" >> /etc/apt/sources.list && \
     apt-get update && \
-    apt-get install jq libgpgme11-dev libassuan-dev libbtrfs-dev libdevmapper-dev -y && \
+    apt-get install libgpgme11-dev libassuan-dev libbtrfs-dev libdevmapper-dev -y && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
 COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
@@ -274,7 +274,7 @@ func repoAdd(name, url string) error {
 	}
 
 	if f.Has(name) {
-		fmt.Printf("repository name (%s) already exists\n", name)
+		//fmt.Printf("repository name (%s) already exists\n", name)
 		return nil
 	}
 
@@ -319,13 +319,13 @@ func repoUpdate() error {
 		repos = append(repos, r)
 	}
 
-	fmt.Printf("Downloading helm chart index ...\n")
+	// fmt.Printf("Downloading helm chart index ...\n")
 	for _, r = range repos {
 		wg.Add(1)
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 			if _, err = re.DownloadIndexFile(); err != nil {
-				fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
+				// fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 			}
 		}(r)
 	}
@@ -372,7 +372,7 @@ func getImages(name, repo, chart, version, args string) ([]string, error) {
 	for _, m = range rel.Hooks {
 		fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", m.Path, m.Manifest)
 	}
-	fmt.Printf("Building Image List ...\n")
+	// fmt.Printf("Building Image List ...\n")
 	splitManifests = releaseutil.SplitManifests(manifests.String())
 	for _, manifest = range splitManifests {
 		if err = yaml.Unmarshal([]byte(manifest), &any); err != nil {
@@ -382,7 +382,7 @@ func getImages(name, repo, chart, version, args string) ([]string, error) {
 			images = searchImages(k, v, images)
 		}
 	}
-	fmt.Printf("Done Image List\n")
+	// fmt.Printf("Done Image List\n")
 	return uniqueNonEmptyElementsOf(images), nil
 }
 
@@ -421,7 +421,7 @@ func runInstall(name, repo, chartName, sets string, client *action.Install) (*re
 		return nil, errors.Wrap(err, "failed parsing --set data")
 	}
 	// Check chart dependencies to make sure all are present in /charts
-	fmt.Printf("Downloading helm chart ...\n")
+	// fmt.Printf("Downloading helm chart ...\n")
 	if chartRequested, err = loader.Load(cp); err != nil {
 		return nil, err
 	}
@@ -468,8 +468,8 @@ func isChartInstallable(ch *chart.Chart) (bool, error) {
 }
 
 func debug(format string, v ...interface{}) {
-	format = fmt.Sprintf("[debug] %s\n", format)
-	log.Output(2, fmt.Sprintf(format, v...))
+	//format = fmt.Sprintf("[debug] %s\n", format)
+	//log.Output(2, fmt.Sprintf(format, v...))
 }
 
 func searchImages(key string, value interface{}, images []string) []string {
