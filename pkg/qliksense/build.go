@@ -36,9 +36,14 @@ import (
 
 const (
 	dockerfileLines = `
+RUN echo "deb http://deb.debian.org/debian stretch-backports main" >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install jq libgpgme11-dev libassuan-dev libbtrfs-dev libdevmapper-dev -y && \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
 COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
 COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /usr/local/bin
+COPY --from=qlik/qliksense-operator:latest /usr/local/bin/skopeo /usr/local/bin
 `
 	stableRepoName = "stable"
 	stableRepoURL  = "https://kubernetes-charts.storage.googleapis.com"
@@ -98,18 +103,12 @@ func (m *Mixin) Build() error {
 	var scanner *bufio.Scanner
 	var parts []string
 
+	fmt.Fprintf(m.Out, dockerfileLines)
 	version, _ = getTransformerVersion()
 	if len(version) > 0 {
 		imagesFile = filepath.Join(chartCache, "images-"+version+".txt")
 	} else {
 		imagesFile = filepath.Join(chartCache, "images-latest.txt")
-	}
-	if len(version) > 0 {
-		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
-		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
-	} else {
-		chartFile = filepath.Join(chartCache, helmDir, chartName+"-latest.tgz")
-		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+filepath.Join(chartCache, helmDir, chartName+"-*.tgz")+" /tmp/.chartcache/", "\\", "/"))
 	}
 	if _, err = os.Stat(imagesFile); err != nil {
 		if os.IsNotExist(err) {
@@ -146,8 +145,13 @@ func (m *Mixin) Build() error {
 	if err = scanner.Err(); err != nil {
 		return err
 	}
-
-	fmt.Fprintf(m.Out, dockerfileLines)
+	if len(version) > 0 {
+		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
+		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
+	} else {
+		chartFile = filepath.Join(chartCache, helmDir, chartName+"-latest.tgz")
+		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+filepath.Join(chartCache, helmDir, chartName+"-*.tgz")+" /tmp/.chartcache/", "\\", "/"))
+	}
 	return nil
 }
 
