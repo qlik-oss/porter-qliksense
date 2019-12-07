@@ -5,9 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -55,14 +54,19 @@ COPY --from=qlik/qliksense-operator:latest /usr/local/bin/skopeo /usr/local/bin
 	sets           = "devMode.enabled=true,engine.acceptEULA=\"yes\""
 	helmHomePrefix = "helmHome"
 	chartCache     = ".chartcache"
-	publicRegistry = "qlik-docker-qsefe.bintray.io"
+	qlikRegsitry   = "QLIK_REGISTRY"
 )
 
 var (
 	settings    *cli.EnvSettings
+	publicRegistry = "qlik-docker-qsefe.bintray.io"
 	helmDir     = filepath.Join("helm", "repository")
 	versionFile = filepath.Join("transformers", "qseokversion.yaml")
 )
+
+type porterYaml struct {
+	Dockerfile string `yaml:"dockerfile"`
+}
 
 type patch struct {
 	Target struct {
@@ -96,12 +100,44 @@ type helmChart struct {
 // Build will generate the necessary Dockerfile lines
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
-	var version, imagesFile, chartFile, image string
-	var err error
-	var createFile = false
-	var file *os.File
-	var scanner *bufio.Scanner
-	var parts []string
+	var (
+		version, imagesFile, chartFile, image string
+		 err error
+		 createFile = false
+		 file, porterFile *os.File
+		 scanner *bufio.Scanner
+		 parts []string
+		 porterBytes []byte
+		 porterFileYaml porterYaml
+	)
+	if porterBytes,err = ioutil.ReadAll(m.In); err != nil {
+		return err
+	}
+
+	if err = yaml.Unmarshal(porterBytes, &porterFileYaml); err != nil {
+		return err
+	}
+
+	if len(porterFileYaml.Dockerfile) > 0 {
+		if porterFile, err = os.Open(porterFileYaml.Dockerfile); err != nil {
+			return err
+		}
+		defer porterFile.Close()
+	
+		scanner = bufio.NewScanner(porterFile)
+	
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), qlikRegsitry) {
+				parts = strings.Split(scanner.Text(), "=")
+				if len(parts) > 1 {
+					publicRegistry = parts[len(parts)-1]
+				}
+			}
+		}
+		if err = scanner.Err(); err != nil {
+			return err
+		}	
+	}
 
 	fmt.Fprintf(m.Out, dockerfileLines)
 	version, _ = getTransformerVersion()
