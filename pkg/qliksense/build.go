@@ -147,10 +147,10 @@ func (m *Mixin) Build() error {
 	}
 	if len(version) > 0 {
 		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
-		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
+		fmt.Fprintln(m.Out, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
 	} else {
 		chartFile = filepath.Join(chartCache, helmDir, chartName+"-latest.tgz")
-		fmt.Fprintln(os.Stdout, strings.ReplaceAll("ADD "+filepath.Join(chartCache, helmDir, chartName+"-*.tgz")+" /tmp/.chartcache/", "\\", "/"))
+		fmt.Fprintln(m.Out, strings.ReplaceAll("ADD "+filepath.Join(chartCache, helmDir, chartName+"-*.tgz")+" /tmp/.chartcache/", "\\", "/"))
 	}
 	return nil
 }
@@ -274,7 +274,7 @@ func repoAdd(name, url string) error {
 	}
 
 	if f.Has(name) {
-		//fmt.Printf("repository name (%s) already exists\n", name)
+		fmt.Printf("repository name (%s) already exists\n", name)
 		return nil
 	}
 
@@ -319,13 +319,13 @@ func repoUpdate() error {
 		repos = append(repos, r)
 	}
 
-	//fmt.Printf("Downloading helm chart index ...\n")
+	fmt.Printf("Downloading helm chart index ...\n")
 	for _, r = range repos {
 		wg.Add(1)
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 			if _, err = re.DownloadIndexFile(); err != nil {
-				//fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
+				fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 			}
 		}(r)
 	}
@@ -372,7 +372,7 @@ func getImages(name, repo, chart, version, args string) ([]string, error) {
 	for _, m = range rel.Hooks {
 		fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", m.Path, m.Manifest)
 	}
-	//fmt.Printf("Building Image List ...\n")
+	fmt.Printf("Building Image List ...\n")
 	splitManifests = releaseutil.SplitManifests(manifests.String())
 	for _, manifest = range splitManifests {
 		if err = yaml.Unmarshal([]byte(manifest), &any); err != nil {
@@ -382,7 +382,7 @@ func getImages(name, repo, chart, version, args string) ([]string, error) {
 			images = searchImages(k, v, images)
 		}
 	}
-	//fmt.Printf("Done Image List\n")
+	fmt.Printf("Done Image List\n")
 	return uniqueNonEmptyElementsOf(images), nil
 }
 
@@ -399,19 +399,17 @@ func runInstall(name, repo, chartName, sets string, client *action.Install) (*re
 		man                   *downloader.Manager
 	)
 
-	//debug("Original chart version: %q", client.Version)
+	debug("Original chart version: %q", client.Version)
 	if client.Version == "" && client.Devel {
-		//debug("setting version to >0.0.0-0")
+		debug("setting version to >0.0.0-0")
 		client.Version = ">0.0.0-0"
 	}
 
-	//name, chart, err := client.NameAndChart(args)
-	//client.ReleaseName = name
 	if cp, err = client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", repo, chartName), settings); err != nil {
 		return nil, err
 	}
 
-	//debug("CHART PATH: %s\n", cp)
+	debug("CHART PATH: %s\n", cp)
 
 	p = getter.All(settings)
 	if vals, err = valueOpts.MergeValues(p); err != nil {
@@ -423,7 +421,7 @@ func runInstall(name, repo, chartName, sets string, client *action.Install) (*re
 		return nil, errors.Wrap(err, "failed parsing --set data")
 	}
 	// Check chart dependencies to make sure all are present in /charts
-	//fmt.Printf("Downloading helm chart ...\n")
+	fmt.Printf("Downloading helm chart ...\n")
 	if chartRequested, err = loader.Load(cp); err != nil {
 		return nil, err
 	}
