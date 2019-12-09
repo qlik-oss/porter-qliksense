@@ -2,6 +2,7 @@ package qliksense
 
 import (
 	"bufio"
+	"strconv"
 	"bytes"
 	"context"
 	"fmt"
@@ -57,6 +58,7 @@ COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /us
 	chartCache     = ".chartcache"
 	qlikRegsitry   = "QLIK_REGISTRY"
 	qseokVersion   = "QSEOK_VERSION"
+	airGapped      = "AIR_GAPPED"
 	porterFile     = "porter.yaml"
 )
 
@@ -104,14 +106,15 @@ type helmChart struct {
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
 	var (
-		version, imagesFile, chartFile, image string
+		version, imagesFile, chartFile, image, scannedText string
 		err                                   error
-		createFile                            = false
+		createFile                            bool
 		file,porterDockerFile                 *os.File
 		scanner                               *bufio.Scanner
 		parts                                 []string
 		porterBytes                           []byte
 		porterFileYaml                        porterYaml
+		pullImages							  = true
 	)
 	if  porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
@@ -131,16 +134,23 @@ func (m *Mixin) Build() error {
 		scanner = bufio.NewScanner(porterDockerFile)
 
 		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), qlikRegsitry) {
-				parts = strings.Split(scanner.Text(), "=")
+			scannedText = scanner.Text()
+			if strings.Contains(scannedText, qlikRegsitry) {
+				parts = strings.Split(scannedText, "=")
 				if len(parts) > 1 {
 					publicRegistry = parts[len(parts)-1]
 				}
 			}
-			if strings.Contains(scanner.Text(), qseokVersion) {
-				parts = strings.Split(scanner.Text(), "=")
+			if strings.Contains(scannedText, qseokVersion) {
+				parts = strings.Split(scannedText, "=")
 				if len(parts) > 1 {
 					version = parts[len(parts)-1]
+				}
+			}
+			if strings.Contains(scanner.Text(), airGapped) {
+				parts = strings.Split(scannedText, "=")
+				if len(parts) > 1 {
+					pullImages,_= strconv.ParseBool(parts[len(parts)-1])
 				}
 			}
 		}
@@ -177,21 +187,23 @@ func (m *Mixin) Build() error {
 			return err
 		}
 	}
-	if file, err = os.Open(imagesFile); err != nil {
-		return err
-	}
-	defer file.Close()
+	if pullImages {
+		if file, err = os.Open(imagesFile); err != nil {
+			return err
+		}
+		defer file.Close()
 
-	scanner = bufio.NewScanner(file)
+		scanner = bufio.NewScanner(file)
 
-	for scanner.Scan() {
-		parts = strings.Split(scanner.Text(), "/")
-		image = parts[len(parts)-1]
-		fmt.Fprintln(m.Out, "COPY --from="+publicRegistry+"/qlikop-"+image+" /cache/"+image+" /cache/"+image)
-	}
+		for scanner.Scan() {
+			parts = strings.Split(scanner.Text(), "/")
+			image = parts[len(parts)-1]
+			fmt.Fprintln(m.Out, "COPY --from="+publicRegistry+"/qlikop-"+image+" /cache/"+image+" /cache/"+image)
+		}
 
-	if err = scanner.Err(); err != nil {
-		return err
+		if err = scanner.Err(); err != nil {
+			return err
+		}
 	}
 	if len(version) > 0 {
 		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
