@@ -41,8 +41,9 @@ RUN echo "deb http://deb.debian.org/debian stretch-backports main" >> /etc/apt/s
     rm -rf /var/lib/apt/lists/*
 COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
 COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
+COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin/skopeo /usr/local/bin
 COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /usr/local/bin
-COPY --from=qlik/qliksense-operator:latest /usr/local/bin/skopeo /usr/local/bin
+
 `
 	stableRepoName = "stable"
 	stableRepoURL  = "https://kubernetes-charts.storage.googleapis.com"
@@ -56,6 +57,7 @@ COPY --from=qlik/qliksense-operator:latest /usr/local/bin/skopeo /usr/local/bin
 	chartCache     = ".chartcache"
 	qlikRegsitry   = "QLIK_REGISTRY"
 	qseokVersion   = "QSEOK_VERSION"
+	porterFile     = "porter.yaml"
 )
 
 var (
@@ -105,27 +107,28 @@ func (m *Mixin) Build() error {
 		version, imagesFile, chartFile, image string
 		err                                   error
 		createFile                            = false
-		file, porterFile                      *os.File
+		file,porterDockerFile                 *os.File
 		scanner                               *bufio.Scanner
 		parts                                 []string
 		porterBytes                           []byte
 		porterFileYaml                        porterYaml
 	)
-	if porterBytes, err = ioutil.ReadAll(m.In); err != nil {
+	if  porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
 	}
+
 
 	if err = yaml.Unmarshal(porterBytes, &porterFileYaml); err != nil {
 		return err
 	}
 
 	if len(porterFileYaml.Dockerfile) > 0 {
-		if porterFile, err = os.Open(porterFileYaml.Dockerfile); err != nil {
+		if porterDockerFile, err = os.Open(porterFileYaml.Dockerfile); err != nil {
 			return err
 		}
-		defer porterFile.Close()
+		defer porterDockerFile.Close()
 
-		scanner = bufio.NewScanner(porterFile)
+		scanner = bufio.NewScanner(porterDockerFile)
 
 		for scanner.Scan() {
 			if strings.Contains(scanner.Text(), qlikRegsitry) {
