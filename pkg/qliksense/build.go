@@ -118,7 +118,7 @@ func (m *Mixin) Build() error {
 	//	imageCopyList                                                            = make([]string, 0)
 		porterBytes                                                              []byte
 		porterFileYaml                                                           porterYaml
-		pullImages                                                               = true
+		pullImages                                                               = false
 	)
 	if porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
