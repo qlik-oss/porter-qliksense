@@ -63,18 +63,11 @@ $(BINDIR)/$(VERSION)/$(MIXIN)-$(CLIENT_PLATFORM)-$(CLIENT_ARCH)$(FILE_EXT):
 
 verify: verify-vendor
 
-verify-vendor: clean-packr dep
-	dep check
+verify-vendor: clean-packr
+	go mod verify 
 
-HAS_DEP := $(shell command -v dep)
-dep:
-ifndef HAS_DEP
-	curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-endif
-	dep version
-
-vendor: dep
-	dep ensure
+vendor: 
+	go mod vendor 
 
 test: test-unit
 	$(BINDIR)/$(MIXIN)$(FILE_EXT) version
