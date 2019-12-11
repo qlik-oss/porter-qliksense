@@ -369,6 +369,8 @@ github.com/prometheus/procfs v0.0.5 h1:3+auTFlqw+ZaQYJARz6ArODtkaIwtvBTx3N2NehQl
 github.com/prometheus/procfs v0.0.5/go.mod h1:4A/X28fw3Fc593LaREMrKMqOKvUAntwMDaekg4FpcdQ=
 github.com/qlik-oss/qliksense-operator v0.1.2 h1:xhxfsU5beMhBTq/zoo8UvhMgIG1PnelPCB5v4w3YuUw=
 github.com/qlik-oss/qliksense-operator v0.1.2/go.mod h1:st5M8sB7YBqtoSUwPwlitK4xV8yYJpXQGRfm4uJX8Og=
+github.com/qlik-oss/qliksense-operator v0.1.3-0.20191209232824-f613eee2ad96/go.mod h1:st5M8sB7YBqtoSUwPwlitK4xV8yYJpXQGRfm4uJX8Og=
+github.com/qlik-oss/qliksense-operator v0.2.0/go.mod h1:st5M8sB7YBqtoSUwPwlitK4xV8yYJpXQGRfm4uJX8Og=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=

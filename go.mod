@@ -13,7 +13,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/gofrs/flock v0.7.1
 	github.com/pkg/errors v0.8.1
-	github.com/qlik-oss/qliksense-operator v0.1.2
+	github.com/qlik-oss/qliksense-operator v0.2.0
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
