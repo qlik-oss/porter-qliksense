@@ -3,7 +3,6 @@ module github.com/qlik-oss/porter-qliksense
 go 1.13
 
 require (
-	github.com/Azure/go-autorest v11.1.2+incompatible // indirect
 	github.com/PaesslerAG/gval v1.0.1 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
 	github.com/deislabs/porter v0.17.0-beta.1
