@@ -2,13 +2,14 @@ package qliksense
 
 import (
 	"bufio"
-	"strconv"
 	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -38,7 +39,7 @@ const (
 	dockerfileLines = `
 RUN echo "deb http://deb.debian.org/debian stretch-backports main" >> /etc/apt/sources.list && \
     apt-get update && \
-    apt-get install libgpgme11-dev libassuan-dev libbtrfs-dev libdevmapper-dev -y && \
+    apt-get install --no-install-recommends libgpgme11-dev libassuan-dev libbtrfs-dev libdevmapper-dev rdfind -y && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
 COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
@@ -106,20 +107,22 @@ type helmChart struct {
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
 	var (
-		version, imagesFile, chartFile, image, scannedText string
-		err                                   error
-		createFile                            bool
-		file,porterDockerFile                 *os.File
-		scanner                               *bufio.Scanner
-		parts                                 []string
-		porterBytes                           []byte
-		porterFileYaml                        porterYaml
-		pullImages							  = true
+		version, imagesFile, chartFile, image, scannedText, fullImage	  		 string
+	//	imageCopy																 string
+		err                                                                      error
+		createFile                                                               bool
+		file, porterDockerFile                                                   *os.File
+		scanner                                                                  *bufio.Scanner
+		parts																     []string
+	//	imageNameParts                                                   	     []string
+	//	imageCopyList                                                            = make([]string, 0)
+		porterBytes                                                              []byte
+		porterFileYaml                                                           porterYaml
+		pullImages                                                               = true
 	)
-	if  porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
+	if porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
 	}
-
 
 	if err = yaml.Unmarshal(porterBytes, &porterFileYaml); err != nil {
 		return err
@@ -150,7 +153,7 @@ func (m *Mixin) Build() error {
 			if strings.Contains(scanner.Text(), airGapped) {
 				parts = strings.Split(scannedText, "=")
 				if len(parts) > 1 {
-					pullImages,_= strconv.ParseBool(parts[len(parts)-1])
+					pullImages, _ = strconv.ParseBool(parts[len(parts)-1])
 				}
 			}
 		}
@@ -196,14 +199,31 @@ func (m *Mixin) Build() error {
 		scanner = bufio.NewScanner(file)
 
 		for scanner.Scan() {
-			parts = strings.Split(scanner.Text(), "/")
-			image = parts[len(parts)-1]
-			fmt.Fprintln(m.Out, "COPY --from="+publicRegistry+"/qlikop-"+image+" /cache/"+image+" /cache/"+image)
-		}
+			fullImage = scanner.Text()
+			if !strings.Contains(fullImage, "qliktech-docker-snapshot.jfrog.io") {
+				parts = strings.Split(scanner.Text(), "/")
+				image = parts[len(parts)-1]
 
+				// imageNameParts = strings.Split(image, ":")
+				// Once BuildKit is supported by Porter
+				// fmt.Fprintln(m.Out, "FROM qlik/qliksense-cloud-tools:latest as "+imageNameParts[0]+"_"+imageNameParts[1])
+				fmt.Fprintln(m.Out, "RUN mkdir -p /cache/"+image+" && skopeo --insecure-policy copy docker://"+fullImage+" dir:/cache/"+image)
+				// Buildkit
+				// imageCopyList = append(imageCopyList, "COPY --from="+imageNameParts[0]+"_"+imageNameParts[1]+" /cache/"+image+" /cache/"+image)
+
+
+			}
+		}
 		if err = scanner.Err(); err != nil {
 			return err
 		}
+		// fmt.Fprintln(m.Out, "FROM base")
+		// fmt.Fprintln(m.Out, "RUN mkdir /cache")
+		// for _, imageCopy = range imageCopyList {
+		// 	fmt.Fprintln(m.Out, imageCopy)
+		// }
+		fmt.Fprintln(m.Out, "RUN rdfind -makehardlinks true /cache")
+
 	}
 	if len(version) > 0 {
 		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
@@ -577,5 +597,6 @@ func uniqueNonEmptyElementsOf(s []string) []string {
 			}
 		}
 	}
+	sort.Strings(us)
 	return us
 }
