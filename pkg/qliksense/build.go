@@ -43,7 +43,6 @@ RUN echo "deb http://deb.debian.org/debian stretch-backports main" >> /etc/apt/s
     rm -rf /var/lib/apt/lists/*
 COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin /usr/local/bin
 COPY --from=qlik/qliksense-cloud-tools:latest /root/.config/kustomize /root/.config/kustomize
-COPY --from=qlik/qliksense-cloud-tools:latest /usr/local/bin/skopeo /usr/local/bin
 COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /usr/local/bin
 
 `
