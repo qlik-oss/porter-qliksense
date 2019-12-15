@@ -106,18 +106,18 @@ type helmChart struct {
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
 	var (
-		version, imagesFile, chartFile, image, scannedText, fullImage	  		 string
-	//	imageCopy																 string
-		err                                                                      error
-		createFile                                                               bool
-		file, porterDockerFile                                                   *os.File
-		scanner                                                                  *bufio.Scanner
-		parts																     []string
-	//	imageNameParts                                                   	     []string
-	//	imageCopyList                                                            = make([]string, 0)
-		porterBytes                                                              []byte
-		porterFileYaml                                                           porterYaml
-		pullImages                                                               = false
+		version, imagesFile, chartFile, image, scannedText, fullImage string
+		//	imageCopy																 string
+		err                                 error
+		createFile                          bool
+		file, versionFile, porterDockerFile *os.File
+		scanner                             *bufio.Scanner
+		parts                               []string
+		//	imageNameParts                                                   	     []string
+		//	imageCopyList                                                            = make([]string, 0)
+		porterBytes    []byte
+		porterFileYaml porterYaml
+		pullImages     = false
 	)
 	if porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
@@ -126,7 +126,7 @@ func (m *Mixin) Build() error {
 	if err = yaml.Unmarshal(porterBytes, &porterFileYaml); err != nil {
 		return err
 	}
-
+	os.Mkdir(chartCache, os.ModePerm)
 	if len(porterFileYaml.Dockerfile) > 0 {
 		if porterDockerFile, err = os.Open(porterFileYaml.Dockerfile); err != nil {
 			return err
@@ -163,10 +163,15 @@ func (m *Mixin) Build() error {
 
 	fmt.Fprintf(m.Out, dockerfileLines)
 	if len(version) == 0 {
-		version, _ = getTransformerVersion()
+		version, _ = GetTransformerVersion()
 	}
 	if len(version) > 0 {
 		imagesFile = filepath.Join(chartCache, "images-"+version+".txt")
+		if versionFile, err = os.Create(filepath.Join(chartCache, "VERSION")); err != nil {
+			return err
+		}
+		defer versionFile.Close()
+		versionFile.WriteString(version)
 	} else {
 		imagesFile = filepath.Join(chartCache, "images-latest.txt")
 	}
@@ -210,7 +215,6 @@ func (m *Mixin) Build() error {
 				// Buildkit
 				// imageCopyList = append(imageCopyList, "COPY --from="+imageNameParts[0]+"_"+imageNameParts[1]+" /cache/"+image+" /cache/"+image)
 
-
 			}
 		}
 		if err = scanner.Err(); err != nil {
@@ -234,36 +238,6 @@ func (m *Mixin) Build() error {
 	return nil
 }
 
-func getTransformerVersion() (string, error) {
-	var patchInst patch
-	var bytes []byte
-	var err error
-	var selPatch selectivePatch
-	var chart helmChart
-
-	if _, err = os.Stat(versionFile); err != nil {
-		if os.IsNotExist(err) {
-			return "", err
-		}
-		return "", errors.Errorf("Unable to determine version file %v exists", versionFile)
-	}
-	if bytes, err = ioutil.ReadFile(versionFile); err != nil {
-		return "", err
-	}
-	if err = yaml.Unmarshal(bytes, &selPatch); err != nil {
-		return "", err
-	}
-	for _, patchInst = range selPatch.Patches {
-		err = yaml.Unmarshal([]byte(patchInst.Patch), &chart)
-		if err != nil {
-			if chart.ChartName == chartName {
-				return chart.ChartVersion, nil
-			}
-		}
-	}
-	return "", nil
-}
-
 func createImagesFile(version string, imagesFile string) error {
 	var image, helmHome string
 	var err error
@@ -276,7 +250,6 @@ func createImagesFile(version string, imagesFile string) error {
 	}
 	defer os.RemoveAll(helmHome)
 
-	os.Mkdir(chartCache, os.ModePerm)
 	os.Setenv("HELM_NAMESPACE", namespace)
 	os.Setenv("XDG_CONFIG_HOME", helmHome)
 	os.Setenv("XDG_CACHE_HOME", chartCache)
@@ -598,4 +571,35 @@ func uniqueNonEmptyElementsOf(s []string) []string {
 	}
 	sort.Strings(us)
 	return us
+}
+
+// GetTransformerVersion ...
+func GetTransformerVersion() (string, error) {
+	var patchInst patch
+	var bytes []byte
+	var err error
+	var selPatch selectivePatch
+	var chart helmChart
+
+	if _, err = os.Stat(versionFile); err != nil {
+		if os.IsNotExist(err) {
+			return "", err
+		}
+		return "", errors.Errorf("Unable to determine About file %v exists", versionFile)
+	}
+	if bytes, err = ioutil.ReadFile(versionFile); err != nil {
+		return "", err
+	}
+	if err = yaml.Unmarshal(bytes, &selPatch); err != nil {
+		return "", err
+	}
+	for _, patchInst = range selPatch.Patches {
+		err = yaml.Unmarshal([]byte(patchInst.Patch), &chart)
+		if err != nil {
+			if chart.ChartName == chartName {
+				return chart.ChartVersion, nil
+			}
+		}
+	}
+	return "", nil
 }
