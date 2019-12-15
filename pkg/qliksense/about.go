@@ -29,7 +29,7 @@ type AboutArguments struct {
 }
 
 type VersionOutput struct {
-	QliksenseVersion string   `yaml:"qliksenseVersion"`
+	QliksenseVersion string   `yaml:"qlikSenseVersion"`
 	Images           []string `yaml:"images"`
 }
 
