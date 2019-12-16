@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,17 +55,14 @@ COPY --from=qlik/qliksense-operator:latest /usr/local/bin/qliksense-operator /us
 	sets           = "devMode.enabled=true,engine.acceptEULA=\"yes\""
 	helmHomePrefix = "helmHome"
 	chartCache     = ".chartcache"
-	qlikRegsitry   = "QLIK_REGISTRY"
 	qseokVersion   = "QSEOK_VERSION"
-	airGapped      = "AIR_GAPPED"
 	porterFile     = "porter.yaml"
 )
 
 var (
-	settings       *cli.EnvSettings
-	publicRegistry = "qlik-docker-qsefe.bintray.io"
-	helmDir        = filepath.Join("helm", "repository")
-	versionFile    = filepath.Join("transformers", "qseokversion.yaml")
+	settings    *cli.EnvSettings
+	helmDir     = filepath.Join("helm", "repository")
+	versionFile = filepath.Join("transformers", "qseokversion.yaml")
 )
 
 type porterYaml struct {
@@ -106,18 +102,14 @@ type helmChart struct {
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
 	var (
-		version, imagesFile, chartFile, image, scannedText, fullImage string
-		//	imageCopy																 string
-		err                                 error
-		createFile                          bool
-		file, versionFile, porterDockerFile *os.File
-		scanner                             *bufio.Scanner
-		parts                               []string
-		//	imageNameParts                                                   	     []string
-		//	imageCopyList                                                            = make([]string, 0)
-		porterBytes    []byte
-		porterFileYaml porterYaml
-		pullImages     = false
+		version, imagesFile, chartFile, scannedText string
+		err                                         error
+		createFile                                  bool
+		versionFile, porterDockerFile               *os.File
+		scanner                                     *bufio.Scanner
+		parts                                       []string
+		porterBytes                                 []byte
+		porterFileYaml                              porterYaml
 	)
 	if porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
 		return err
@@ -137,22 +129,10 @@ func (m *Mixin) Build() error {
 
 		for scanner.Scan() {
 			scannedText = scanner.Text()
-			if strings.Contains(scannedText, qlikRegsitry) {
-				parts = strings.Split(scannedText, "=")
-				if len(parts) > 1 {
-					publicRegistry = parts[len(parts)-1]
-				}
-			}
 			if strings.Contains(scannedText, qseokVersion) {
 				parts = strings.Split(scannedText, "=")
 				if len(parts) > 1 {
 					version = parts[len(parts)-1]
-				}
-			}
-			if strings.Contains(scanner.Text(), airGapped) {
-				parts = strings.Split(scannedText, "=")
-				if len(parts) > 1 {
-					pullImages, _ = strconv.ParseBool(parts[len(parts)-1])
 				}
 			}
 		}
@@ -194,40 +174,7 @@ func (m *Mixin) Build() error {
 			return err
 		}
 	}
-	if pullImages {
-		if file, err = os.Open(imagesFile); err != nil {
-			return err
-		}
-		defer file.Close()
 
-		scanner = bufio.NewScanner(file)
-
-		for scanner.Scan() {
-			fullImage = scanner.Text()
-			if !strings.Contains(fullImage, "qliktech-docker-snapshot.jfrog.io") {
-				parts = strings.Split(scanner.Text(), "/")
-				image = parts[len(parts)-1]
-
-				// imageNameParts = strings.Split(image, ":")
-				// Once BuildKit is supported by Porter
-				// fmt.Fprintln(m.Out, "FROM qlik/qliksense-cloud-tools:latest as "+imageNameParts[0]+"_"+imageNameParts[1])
-				fmt.Fprintln(m.Out, "RUN mkdir -p /cache/"+image+" && skopeo --insecure-policy copy docker://"+fullImage+" dir:/cache/"+image)
-				// Buildkit
-				// imageCopyList = append(imageCopyList, "COPY --from="+imageNameParts[0]+"_"+imageNameParts[1]+" /cache/"+image+" /cache/"+image)
-
-			}
-		}
-		if err = scanner.Err(); err != nil {
-			return err
-		}
-		// fmt.Fprintln(m.Out, "FROM base")
-		// fmt.Fprintln(m.Out, "RUN mkdir /cache")
-		// for _, imageCopy = range imageCopyList {
-		// 	fmt.Fprintln(m.Out, imageCopy)
-		// }
-		fmt.Fprintln(m.Out, "RUN rdfind -makehardlinks true /cache")
-
-	}
 	if len(version) > 0 {
 		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
 		fmt.Fprintln(m.Out, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
