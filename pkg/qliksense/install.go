@@ -2,12 +2,12 @@ package qliksense
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/qlik-oss/qliksense-operator/pkg/config"
-	"gopkg.in/yaml.v2"
 	"os"
 	_ "os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 // The `Porter.sh` action for Install
@@ -22,7 +22,7 @@ type InstallStep struct {
 
 type InstallArguments struct {
 	Step `yaml:",inline"`
-	Cr   config.CRConfig `yaml:"cr" json:"cr"`
+	Cr   map[string]interface{} `yaml:"cr" json:"cr"`
 }
 
 // The public method invoked by `porter` when performing an `Install` step that has a `qliksense` mixin step
@@ -43,7 +43,7 @@ func (m *Mixin) Install() error {
 	}
 
 	step := action.Steps[0]
-	m.executeQliksense(&step.Cr)
+	m.executeQliksense(step.Cr)
 	for _, output := range step.Outputs {
 		err = m.Context.WriteMixinOutputToFile(output.Name, []byte(fmt.Sprintf("%v", output)))
 		if err != nil {
@@ -53,7 +53,7 @@ func (m *Mixin) Install() error {
 	return nil
 }
 
-func (m *Mixin) executeQliksense(cr *config.CRConfig) error {
+func (m *Mixin) executeQliksense(cr map[string]interface{}) error {
 	fmt.Println("applying patch ...")
 	crContents, err := yaml.Marshal(cr)
 	if err != nil {

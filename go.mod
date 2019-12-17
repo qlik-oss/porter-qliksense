@@ -12,7 +12,6 @@ require (
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/gofrs/flock v0.7.1
 	github.com/pkg/errors v0.8.1
-	github.com/qlik-oss/qliksense-operator v0.2.0
 	github.com/rogpeppe/go-internal v1.5.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
@@ -20,8 +19,12 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e // indirect
 	golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.7
 	helm.sh/helm/v3 v3.0.0
+	k8s.io/api v0.0.0-20191016225839-816a9b7df678 // indirect
+	k8s.io/apimachinery v0.0.0-20191020214737-6c8691705fc5 // indirect
+	k8s.io/client-go v11.0.0+incompatible // indirect
 )
 
 replace (

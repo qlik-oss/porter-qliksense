@@ -24,21 +24,7 @@
     "invokeStep": {
       "type": "object",
       "properties": {
-        "qliksense": {
-          "type": "object",
-          "properties": {
-            "version": {
-              "type": "string"
-            },
-            "description": {
-              "$ref": "#/definitions/stepDescription"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "version"
-          ]
-        }
+        "qliksense": {"$ref": "#/definitions/qliksense"}
       },
       "required": [
         "qliksense"
@@ -92,6 +78,9 @@
       "type": "object",
       "properties": {
         "name": {
+          "type": "string"
+        },
+        "version": {
           "type": "string"
         },
         "description": {
