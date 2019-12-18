@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/qlik-oss/qliksense-operator/pkg/config"
 	"gopkg.in/yaml.v2"
 )
 
@@ -21,7 +20,7 @@ type UninstallStep struct {
 // UninstallArguments are the arguments available for the Uninstall action
 type UninstallArguments struct {
 	Step `yaml:",inline"`
-	Cr   config.CRConfig `yaml:"cr"`
+	Cr   map[string]interface{} `yaml:"cr"`
 }
 
 // Uninstall deletes a provided set of Kustomize releases, supplying optional flags/params
@@ -40,6 +39,6 @@ func (m *Mixin) Uninstall() error {
 		return errors.Errorf("expected a single step, but got %d", len(action.Steps))
 	}
 	step := action.Steps[0]
-	m.executeQliksense(&step.Cr)
+	m.executeQliksense(step.Cr)
 	return nil
 }
