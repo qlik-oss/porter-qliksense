@@ -21,7 +21,7 @@
       ],
       "additionalProperties": false
     },
-    "invokeStep": {
+    "aboutStep": {
       "type": "object",
       "properties": {
         "qliksense": {"$ref": "#/definitions/qliksense"}
@@ -131,13 +131,11 @@
       "items": {
         "$ref": "#/definitions/uninstallStep"
       }
-    }
-  },
-  "patternProperties": {
-    ".*": {
+    },
+    "about": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/invokeStep"
+        "$ref": "#/definitions/aboutStep"
       }
     }
   },
