@@ -24,7 +24,21 @@
     "aboutStep": {
       "type": "object",
       "properties": {
-        "qliksense": {"$ref": "#/definitions/qliksense"}
+        "qliksense": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "description": {
+              "$ref": "#/definitions/stepDescription"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "version"
+          ]
+        }
       },
       "required": [
         "qliksense"
@@ -78,9 +92,6 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
-        },
-        "version": {
           "type": "string"
         },
         "description": {
