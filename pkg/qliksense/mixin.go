@@ -33,6 +33,12 @@ func (m *Mixin) getPayloadData() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read the payload from STDIN")
 	}
+	// hack to convert &#34; to " due to the bug https://github.com/deislabs/porter/issues/846
+	// once the bug fixed we dont' need this hack
+	strData := string(data)
+	strData = strings.ReplaceAll(strData, "&#34;", "\"")
+	data = []byte(strData)
+
 	err = m.ValidatePayload(data)
 	if err != nil {
 		return nil, err
