@@ -129,6 +129,9 @@ spec:
   containers:
   - name: nginx
     image: nginx
+    env:
+    - name: FOO
+      value: null 
     ports:
     - containerPort: 80
     volumeMounts:

@@ -3,6 +3,7 @@ package qliksense
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os/exec"
@@ -27,7 +28,9 @@ type AboutStep struct {
 type AboutArguments struct {
 	Step    `yaml:",inline"`
 	Version string `yaml:"version"`
+	Profile string `yaml:"profile"`
 }
+
 type VersionOutput struct {
 	QliksenseVersion string   `yaml:"qlikSenseVersion"`
 	Images           []string `yaml:"images"`
@@ -57,7 +60,7 @@ func (m *Mixin) About() error {
 			log.Printf("error reading the VERSION file, error: %v\n", err)
 			return err
 		}
-		if kuzManifest, err = getKustomizeOutput(); err != nil {
+		if kuzManifest, err = getKustomizeBuildOutput(action.Steps[0].AboutArguments.Profile); err != nil {
 			log.Printf("error executing kustomize, error: %v\n", err)
 			return err
 		}
@@ -75,8 +78,8 @@ func (m *Mixin) About() error {
 	return nil
 }
 
-func getKustomizeOutput() ([]byte, error) {
-	cmd := exec.Command("kustomize", "build", "/cnab/app/manifests/docker-desktop")
+func getKustomizeBuildOutput(path string) ([]byte, error) {
+	cmd := exec.Command("kustomize", "build", path)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -92,16 +95,22 @@ func getImageList(yamlContent []byte) []string {
 	decoder := yaml.NewDecoder(bytes.NewReader(yamlContent))
 	var resource map[string]interface{}
 	imageMap := make(map[string]bool)
-	captureContainerImages := func(path []string, val interface{}) {
-		if len(path) >= 2 && path[len(path)-1] == "image" &&
-			(path[len(path)-2] == "containers" || path[len(path)-2] == "initContainers") {
-			if image, ok := val.(string); ok {
-				imageMap[image] = true
+	for {
+		err := decoder.Decode(&resource)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("error decoding yaml: %v\n", err)
 			}
+			break
 		}
-	}
-	for decoder.Decode(&resource) == nil {
-		traverseYamlDecodedMapRecursively(reflect.ValueOf(resource), []string{}, captureContainerImages)
+		traverseYamlDecodedMapRecursively(reflect.ValueOf(resource), []string{}, func(path []string, val interface{}) {
+			if len(path) >= 2 && path[len(path)-1] == "image" &&
+				(path[len(path)-2] == "containers" || path[len(path)-2] == "initContainers") {
+				if image, ok := val.(string); ok {
+					imageMap[image] = true
+				}
+			}
+		})
 	}
 	var sortedImageList []string
 	for image, _ := range imageMap {
@@ -125,6 +134,8 @@ func traverseYamlDecodedMapRecursively(val reflect.Value, path []string, visitor
 			traverseYamlDecodedMapRecursively(val.MapIndex(key), append(path, key.Interface().(string)), visitorFunc)
 		}
 	default:
-		visitorFunc(path, val.Interface())
+		if kind != reflect.Invalid {
+			visitorFunc(path, val.Interface())
+		}
 	}
 }

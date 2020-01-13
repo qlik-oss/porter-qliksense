@@ -32,11 +32,14 @@
             },
             "description": {
               "$ref": "#/definitions/stepDescription"
+            },
+            "profile": {
+              "type": "string"
             }
           },
           "additionalProperties": false,
           "required": [
-            "version"
+            "version", "profile"
           ]
         }
       },
