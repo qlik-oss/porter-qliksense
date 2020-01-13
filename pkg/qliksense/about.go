@@ -1,14 +1,15 @@
 package qliksense
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
-	_ "os/exec"
+	"log"
+	"os/exec"
 	"path/filepath"
+	"reflect"
+	"sort"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,7 +28,6 @@ type AboutArguments struct {
 	Step    `yaml:",inline"`
 	Version string `yaml:"version"`
 }
-
 type VersionOutput struct {
 	QliksenseVersion string   `yaml:"qlikSenseVersion"`
 	Images           []string `yaml:"images"`
@@ -36,17 +36,13 @@ type VersionOutput struct {
 // About The public method invoked by `porter` when performing an `Install` step that has a `qliksense` mixin step
 func (m *Mixin) About() error {
 	var (
-		payload          []byte
-		version          string
-		err              error
-		action           AboutAction
-		versionOut       VersionOutput
-		file             *os.File
-		realVersion, out []byte
-		scanner          *bufio.Scanner
-		images           []string
+		payload                       []byte
+		version                       string
+		err                           error
+		action                        AboutAction
+		versionOut                    VersionOutput
+		realVersion, out, kuzManifest []byte
 	)
-
 	if payload, err = m.getPayloadData(); err != nil {
 		return err
 	}
@@ -54,28 +50,20 @@ func (m *Mixin) About() error {
 		return err
 	}
 	if len(action.Steps) != 1 {
-		return errors.Errorf("expected a single step, but got %d", len(action.Steps))
+		return fmt.Errorf("expected a single step, but got %d", len(action.Steps))
 	}
-
 	if version = action.Steps[0].AboutArguments.Version; version == "bundled" {
-		realVersion, err = ioutil.ReadFile(filepath.Join(chartCache, "VERSION"))
-
-		if file, err = os.Open(filepath.Join(chartCache, "images-"+string(realVersion)+".txt")); err != nil {
+		if realVersion, err = ioutil.ReadFile(filepath.Join(chartCache, "VERSION")); err != nil {
+			log.Printf("error reading the VERSION file, error: %v\n", err)
 			return err
 		}
-		defer file.Close()
-
-		scanner = bufio.NewScanner(file)
-		images = make([]string, 0)
-		for scanner.Scan() {
-			images = append(images, scanner.Text())
-		}
-		if err = scanner.Err(); err != nil {
+		if kuzManifest, err = getKustomizeOutput(); err != nil {
+			log.Printf("error executing kustomize, error: %v\n", err)
 			return err
 		}
 		versionOut = VersionOutput{
 			QliksenseVersion: string(realVersion),
-			Images:           images,
+			Images:           getImageList(kuzManifest),
 		}
 		if out, err = yaml.Marshal(versionOut); err != nil {
 			return err
@@ -85,4 +73,58 @@ func (m *Mixin) About() error {
 		// TODO: Means we are fetching from Git
 	}
 	return nil
+}
+
+func getKustomizeOutput() ([]byte, error) {
+	cmd := exec.Command("kustomize", "build", "/cnab/app/manifests/docker-desktop")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("executing kustomize process failed with error: %v, stderr: %v\n", err, string(stderr.Bytes()))
+		return nil, err
+	}
+	return stdout.Bytes(), nil
+}
+
+func getImageList(yamlContent []byte) []string {
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlContent))
+	var resource map[string]interface{}
+	imageMap := make(map[string]bool)
+	captureContainerImages := func(path []string, val interface{}) {
+		if len(path) >= 2 && path[len(path)-1] == "image" &&
+			(path[len(path)-2] == "containers" || path[len(path)-2] == "initContainers") {
+			if image, ok := val.(string); ok {
+				imageMap[image] = true
+			}
+		}
+	}
+	for decoder.Decode(&resource) == nil {
+		traverseYamlDecodedMapRecursively(reflect.ValueOf(resource), []string{}, captureContainerImages)
+	}
+	var sortedImageList []string
+	for image, _ := range imageMap {
+		sortedImageList = append(sortedImageList, image)
+	}
+	sort.Strings(sortedImageList)
+	return sortedImageList
+}
+
+func traverseYamlDecodedMapRecursively(val reflect.Value, path []string, visitorFunc func(path []string, val interface{})) {
+	kind := val.Kind()
+	switch kind {
+	case reflect.Interface:
+		traverseYamlDecodedMapRecursively(val.Elem(), path, visitorFunc)
+	case reflect.Slice:
+		for i := 0; i < val.Len(); i++ {
+			traverseYamlDecodedMapRecursively(val.Index(i), path, visitorFunc)
+		}
+	case reflect.Map:
+		for _, key := range val.MapKeys() {
+			traverseYamlDecodedMapRecursively(val.MapIndex(key), append(path, key.Interface().(string)), visitorFunc)
+		}
+	default:
+		visitorFunc(path, val.Interface())
+	}
 }
