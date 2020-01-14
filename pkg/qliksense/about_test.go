@@ -6,7 +6,14 @@ import (
 )
 
 func TestMixin_About_getImageList(t *testing.T) {
-	k8sYaml := `
+	var testCases = []struct {
+		name           string
+		k8sYaml        string
+		expectedImages []string
+	}{
+		{
+			name: "base",
+			k8sYaml: `
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
@@ -153,10 +160,63 @@ spec:
   volumes:
   - name: workdir
     emptyDir: {}
-`
-	images := getImageList([]byte(k8sYaml))
-	expectedImages := []string{"busybox", "k8s.gcr.io/nginx-slim:0.8", "nginx", "nginx:1.7.9", "perl"}
-	if !reflect.DeepEqual(images, expectedImages) {
-		t.Fatalf("expected %v, but got: %v\n", expectedImages, images)
+`,
+			expectedImages: []string{"busybox", "k8s.gcr.io/nginx-slim:0.8", "nginx", "nginx:1.7.9", "perl"},
+		},
+		{
+			name: "works for custom resources and CronJobs",
+			k8sYaml: `
+apiVersion: "qixmanager.qlik.com/v1"
+kind: "Engine"
+metadata:
+  name: release-name-engine-reload
+spec:
+  metadata:
+    labels:
+      qix-engine: qix-engine
+    annotations:
+      prometheus.io/scrape: "true"
+  workloadType: "reload"
+  podSpec:
+    imagePullSecrets:
+      - name: artifactory-docker-secret      
+    dnsConfig:
+      options:
+      - name: timeout
+        value: "1"
+      - name: single-request-reopen
+    containers:
+      - name: engine-reload
+        image: another-engine
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox2
+            args:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+`,
+			expectedImages: []string{"another-engine", "busybox2"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			images := getImageList([]byte(testCase.k8sYaml))
+			if !reflect.DeepEqual(images, testCase.expectedImages) {
+				t.Fatalf("expected %v, but got: %v\n", testCase.expectedImages, images)
+			}
+		})
 	}
 }
