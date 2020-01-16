@@ -63,7 +63,7 @@ func (m *Mixin) About() error {
 			return err
 		}
 		versionOut = VersionOutput{
-			QliksenseVersion: string(realVersion),
+			QliksenseVersion: realVersion,
 			Images:           getImageList(kuzManifest),
 		}
 		if out, err = yaml.Marshal(versionOut); err != nil {
