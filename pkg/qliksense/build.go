@@ -99,7 +99,7 @@ func GetTransformerVersion() (string, error) {
 	}
 	for _, patchInst = range selPatch.Patches {
 		err = yaml.Unmarshal([]byte(patchInst.Patch), &chart)
-		if err != nil {
+		if err == nil {
 			if chart.ChartName == chartName {
 				return chart.ChartVersion, nil
 			}

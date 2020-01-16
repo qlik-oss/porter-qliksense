@@ -55,7 +55,7 @@ func (m *Mixin) About() error {
 	}
 	if version = action.Steps[0].AboutArguments.Version; version == "bundled" {
 		if realVersion, err = GetTransformerVersion(); err != nil {
-			log.Printf("error reading the VERSION file, error: %v\n", err)
+			log.Printf("error reading the VERSION info, error: %v\n", err)
 			return err
 		}
 		if kuzManifest, err = getKustomizeBuildOutput(action.Steps[0].AboutArguments.Profile); err != nil {
