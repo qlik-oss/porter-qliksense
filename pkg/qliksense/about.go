@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"sort"
 
@@ -39,12 +37,12 @@ type VersionOutput struct {
 // About The public method invoked by `porter` when performing an `Install` step that has a `qliksense` mixin step
 func (m *Mixin) About() error {
 	var (
-		payload                       []byte
-		version                       string
-		err                           error
-		action                        AboutAction
-		versionOut                    VersionOutput
-		realVersion, out, kuzManifest []byte
+		payload              []byte
+		realVersion, version string
+		err                  error
+		action               AboutAction
+		versionOut           VersionOutput
+		out, kuzManifest     []byte
 	)
 	if payload, err = m.getPayloadData(); err != nil {
 		return err
@@ -56,8 +54,8 @@ func (m *Mixin) About() error {
 		return fmt.Errorf("expected a single step, but got %d", len(action.Steps))
 	}
 	if version = action.Steps[0].AboutArguments.Version; version == "bundled" {
-		if realVersion, err = ioutil.ReadFile(filepath.Join(chartCache, "VERSION")); err != nil {
-			log.Printf("error reading the VERSION file, error: %v\n", err)
+		if realVersion, err = GetTransformerVersion(); err != nil {
+			log.Printf("error reading the VERSION info, error: %v\n", err)
 			return err
 		}
 		if kuzManifest, err = getKustomizeBuildOutput(action.Steps[0].AboutArguments.Profile); err != nil {
@@ -65,7 +63,7 @@ func (m *Mixin) About() error {
 			return err
 		}
 		versionOut = VersionOutput{
-			QliksenseVersion: string(realVersion),
+			QliksenseVersion: realVersion,
 			Images:           getImageList(kuzManifest),
 		}
 		if out, err = yaml.Marshal(versionOut); err != nil {

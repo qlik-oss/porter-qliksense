@@ -1,12 +1,10 @@
 package qliksense
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -74,67 +72,8 @@ type helmChart struct {
 // Build will generate the necessary Dockerfile lines
 // for an invocation image using this mixin
 func (m *Mixin) Build() error {
-	var (
-		version, chartFile, scannedText string
-		err                             error
-		versionFile, porterDockerFile   *os.File
-		scanner                         *bufio.Scanner
-		parts                           []string
-		porterBytes                     []byte
-		porterFileYaml                  porterYaml
-	)
-	if porterBytes, err = ioutil.ReadFile(porterFile); err != nil {
-		return err
-	}
-
-	if err = yaml.Unmarshal(porterBytes, &porterFileYaml); err != nil {
-		return err
-	}
-	os.Mkdir(chartCache, os.ModePerm)
-	if len(porterFileYaml.Dockerfile) > 0 {
-		if porterDockerFile, err = os.Open(porterFileYaml.Dockerfile); err != nil {
-			return err
-		}
-		defer porterDockerFile.Close()
-
-		scanner = bufio.NewScanner(porterDockerFile)
-
-		for scanner.Scan() {
-			scannedText = scanner.Text()
-			if strings.Contains(scannedText, qseokVersion) {
-				parts = strings.Split(scannedText, "=")
-				if len(parts) > 1 {
-					version = parts[len(parts)-1]
-				}
-			}
-		}
-		if err = scanner.Err(); err != nil {
-			return err
-		}
-	}
 
 	fmt.Fprintf(m.Out, dockerfileLines)
-	if len(version) == 0 {
-		version, _ = GetTransformerVersion()
-	}
-	if len(version) > 0 {
-		if versionFile, err = os.Create(filepath.Join(chartCache, "VERSION")); err != nil {
-			return err
-		}
-		defer versionFile.Close()
-		versionFile.WriteString(version)
-	}
-	if _, err = os.Stat(chartFile); err != nil && !os.IsNotExist(err) {
-		return errors.Errorf("Unable to determine chart file %v exists", chartFile)
-	}
-
-	if len(version) > 0 {
-		chartFile = filepath.Join(chartCache, helmDir, chartName+"-"+version+".tgz")
-		fmt.Fprintln(m.Out, strings.ReplaceAll("ADD "+chartFile+" /tmp/.chartcache/", "\\", "/"))
-	} else {
-		chartFile = filepath.Join(chartCache, helmDir, chartName+"-latest.tgz")
-		fmt.Fprintln(m.Out, strings.ReplaceAll("ADD "+filepath.Join(chartCache, helmDir, chartName+"-*.tgz")+" /tmp/.chartcache/", "\\", "/"))
-	}
 	return nil
 }
 
@@ -160,7 +99,7 @@ func GetTransformerVersion() (string, error) {
 	}
 	for _, patchInst = range selPatch.Patches {
 		err = yaml.Unmarshal([]byte(patchInst.Patch), &chart)
-		if err != nil {
+		if err == nil {
 			if chart.ChartName == chartName {
 				return chart.ChartVersion, nil
 			}
